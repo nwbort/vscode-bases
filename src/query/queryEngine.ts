@@ -1,23 +1,34 @@
 import { BaseConfig, ViewConfig } from "../model/baseSchema";
 import { parsePropertyId, defaultDisplayName } from "../model/propertyId";
-import { VaultIndex } from "../vault/vaultIndex";
-import { ViewModel, ColumnModel } from "../view/viewModel";
+import { NoteRecord } from "../vault/noteRecord";
+import { EvalContext, makeContext } from "../expr/context";
+import { Value, valueToString } from "../expr/values";
+import { resolveProperty } from "./resolveProperty";
+import { passesCombined } from "./filter";
+import { sortRows } from "./sort";
+import { groupRows } from "./groupBy";
+import { computeSummary } from "./summaries";
+import { formatCellParts, formatPlain } from "../view/formatCell";
+import {
+  ViewModel, ColumnModel, RowModel, GroupModel, CellModel,
+} from "../view/viewModel";
 
-// Turns a base config + view + vault index into a renderable ViewModel.
-//
-// Scaffold status: builds the columns/toolbar shell and an empty result set so
-// the webview renders. The actual data pipeline is M3+ work:
-//
-//   TODO(M3): filter (global AND view) via expr/evaluator
-//   TODO(M3): evaluate formula.* columns per row (memoised, cycle-detected)
-//   TODO(M3): sort (multi-key, type-aware) and groupBy
-//   TODO(M3): limit
-//   TODO(M5): built-in + custom summaries (footer + per-group)
-//   TODO(M4): format each cell value (expr/format) incl. links/images
+interface DataSource {
+  all(): NoteRecord[];
+}
+
+interface QueryRow {
+  ctx: EvalContext;
+  note: NoteRecord;
+}
+
+// Turns a base config + view + dataset into a renderable ViewModel by running
+// the full pipeline: filter (global AND view) → sort → limit → group →
+// summaries, formatting each cell for the webview.
 export function buildViewModel(
   config: BaseConfig,
   viewIndex: number,
-  index: VaultIndex,
+  index: DataSource,
 ): ViewModel {
   const views = config.views;
   const view: ViewConfig | undefined = views[viewIndex];
@@ -28,9 +39,51 @@ export function buildViewModel(
   }
 
   const columns = resolveColumns(view, config);
+  const notes = index.all();
+  const formulas = config.formulas ?? {};
 
-  // TODO(M3): replace with the real query pipeline over index.all().
-  void index;
+  // 1. Build a context per note and filter.
+  let rows: QueryRow[] = [];
+  for (const note of notes) {
+    const ctx = makeContext(note, { notes, formulas });
+    if (passesCombined(config.filters, view.filters, ctx)) {
+      rows.push({ ctx, note });
+    }
+  }
+
+  // 2. Sort.
+  rows = sortRows(rows, view.sort);
+
+  // 3. Limit (caps total result rows).
+  if (typeof view.limit === "number" && view.limit >= 0) {
+    rows = rows.slice(0, view.limit);
+  }
+
+  const resultCount = rows.length;
+
+  // 4. Group (optional) and 5. summaries.
+  const customSummaries = config.summaries ?? {};
+  const summaryMap = (view.summaries ?? {}) as Record<string, string>;
+  const sampleCtx = rows[0]?.ctx;
+
+  let groups: GroupModel[] | undefined;
+  let flatRows: RowModel[] = [];
+
+  if (view.groupBy) {
+    const grouped = groupRows(rows, view.groupBy);
+    groups = grouped.map((g) => ({
+      key: g.key,
+      rows: g.rows.map((r) => buildRow(r, columns)),
+      summaries: computeSummaries(summaryMap, columns, g.rows, customSummaries, g.rows[0]?.ctx),
+    }));
+  } else {
+    flatRows = rows.map((r) => buildRow(r, columns));
+  }
+
+  const footerSummaries =
+    Object.keys(summaryMap).length > 0
+      ? computeSummaries(summaryMap, columns, rows, customSummaries, sampleCtx)
+      : undefined;
 
   return {
     viewNames,
@@ -38,34 +91,76 @@ export function buildViewModel(
     type: view.type,
     name: view.name ?? `View ${viewIndex + 1}`,
     columns,
-    rows: [],
-    resultCount: 0,
+    rows: flatRows,
+    groups,
+    summaries: footerSummaries,
+    resultCount,
     settings: extractSettings(view),
   };
 }
 
 function resolveColumns(view: ViewConfig, config: BaseConfig): ColumnModel[] {
   const order = view.order ?? [];
+  const columnSize = (view.columnSize ?? {}) as Record<string, number>;
   return order.map((raw) => {
     const id = parsePropertyId(raw);
-    const configured = config.properties?.[raw]?.displayName;
+    const props = config.properties ?? {};
+    const qualified = `${id.scope}.${id.key}`;
+    const configured =
+      props[raw]?.displayName ?? props[qualified]?.displayName ?? props[id.key]?.displayName;
     return {
       id: raw,
       displayName: configured ?? defaultDisplayName(id),
+      width: columnSize[raw] ?? columnSize[qualified],
+      editable: id.scope === "note",
     };
   });
 }
 
+function buildRow(row: QueryRow, columns: ColumnModel[]): RowModel {
+  const cells: CellModel[] = columns.map((col) => {
+    const id = parsePropertyId(col.id);
+    // The note-title column renders as a clickable link showing the basename,
+    // matching Obsidian (the underlying file.name value keeps its extension).
+    if (id.scope === "file" && id.key === "name") {
+      return {
+        columnId: col.id,
+        parts: [{ kind: "link", text: row.note.file.basename, target: row.note.file.path }],
+      };
+    }
+    const value = resolveProperty(col.id, row.ctx);
+    return {
+      columnId: col.id,
+      parts: formatCellParts(value),
+      editValue: col.editable ? valueToString(value) : undefined,
+    };
+  });
+  return { notePath: row.note.file.path, cells };
+}
+
+function computeSummaries(
+  summaryMap: Record<string, string>,
+  columns: ColumnModel[],
+  rows: QueryRow[],
+  customSummaries: Record<string, string>,
+  ctx: EvalContext | undefined,
+): Record<string, string> | undefined {
+  const entries = Object.entries(summaryMap);
+  if (entries.length === 0 || !ctx) {
+    return undefined;
+  }
+  const out: Record<string, string> = {};
+  for (const [columnId, summaryName] of entries) {
+    const values: Value[] = rows.map((r) => resolveProperty(columnId, r.ctx));
+    const result = computeSummary(summaryName, values, customSummaries, ctx);
+    out[columnId] = formatPlain(result);
+  }
+  return out;
+}
+
 function extractSettings(view: ViewConfig): Record<string, unknown> {
   const known = new Set([
-    "type",
-    "name",
-    "limit",
-    "filters",
-    "order",
-    "sort",
-    "groupBy",
-    "summaries",
+    "type", "name", "limit", "filters", "order", "sort", "groupBy", "summaries",
   ]);
   const settings: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(view)) {
@@ -76,11 +171,7 @@ function extractSettings(view: ViewConfig): Record<string, unknown> {
   return settings;
 }
 
-function emptyModel(
-  viewNames: string[],
-  viewIndex: number,
-  error: string,
-): ViewModel {
+function emptyModel(viewNames: string[], viewIndex: number, error: string): ViewModel {
   return {
     viewNames,
     activeViewIndex: viewIndex,

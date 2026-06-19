@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { parseBase } from "./model/baseSchema";
+import { parsePropertyId } from "./model/propertyId";
 import { VaultIndex } from "./vault/vaultIndex";
+import { writeProperty } from "./vault/writeProperty";
 import { buildViewModel } from "./query/queryEngine";
 import { HostMessage, WebviewMessage } from "./view/messages";
 
@@ -61,19 +63,27 @@ export class BaseEditorProvider implements vscode.CustomTextEditorProvider {
           void render();
           break;
         case "openNote": {
-          const uri = vscode.Uri.joinPath(
-            workspaceRoot() ?? document.uri,
-            msg.notePath,
-          );
-          void vscode.window.showTextDocument(uri);
+          const uri = vscode.Uri.joinPath(workspaceRoot() ?? document.uri, msg.notePath);
+          void vscode.window.showTextDocument(uri, { preview: true });
           break;
         }
-        case "editCell":
-          // TODO(M7): write the value back into the note frontmatter via
-          // vault/writeProperty + WorkspaceEdit, then re-index.
+        case "openExternal":
+          void vscode.env.openExternal(vscode.Uri.parse(msg.url));
           break;
+        case "editCell": {
+          const id = parsePropertyId(msg.columnId);
+          if (id.scope !== "note") {
+            break; // only note properties are writable
+          }
+          const uri = vscode.Uri.joinPath(workspaceRoot() ?? document.uri, msg.notePath);
+          void writeProperty(uri, id.key, msg.value).then(
+            () => undefined,
+            (err) => post({ type: "setError", message: `Failed to save: ${String(err)}` }),
+          );
+          break;
+        }
         case "setSort":
-          // TODO(M7): persist sort into the .base view config (WorkspaceEdit).
+          // Persisting sort into the .base view config is a future enhancement.
           break;
       }
     });

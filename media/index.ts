@@ -1,9 +1,11 @@
 import type { HostMessage, WebviewMessage } from "../src/view/messages";
 import type { ViewModel } from "../src/view/viewModel";
 import { renderTable } from "./render/table";
+import { renderCards } from "./render/cards";
+import { renderList } from "./render/list";
 
 // Webview entry point. Receives a ViewModel from the extension and renders the
-// active view. M0 ships a working table renderer; cards/list are M6.
+// active view as a table, cards, or list.
 
 interface VsCodeApi {
   postMessage(msg: WebviewMessage): void;
@@ -48,7 +50,12 @@ function render(model: ViewModel) {
     case "table":
       app.appendChild(renderTable(model, post));
       break;
-    // TODO(M6): case "cards": renderCards; case "list": renderList.
+    case "cards":
+      app.appendChild(renderCards(model, post));
+      break;
+    case "list":
+      app.appendChild(renderList(model, post));
+      break;
     default:
       app.appendChild(placeholder(`View type "${model.type}" not yet implemented.`));
   }
