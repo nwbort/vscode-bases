@@ -4,11 +4,11 @@ A VS Code extension that brings **Obsidian Bases** to VS Code — database-like
 **table**, **cards**, and **list** views over a folder of Markdown notes,
 driven by Obsidian-compatible `.base` files.
 
-> **Status: scaffold.** The project structure, build, custom editor, vault
-> indexer, and a working table renderer are in place. The expression engine and
-> query pipeline (the parts that turn `.base` files into rows) are stubbed with
-> a detailed spec. See **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** for
-> the full plan and milestones.
+> **Status: functional MVP.** The expression engine, query pipeline, and the
+> table / cards / list renderers are implemented and tested against the
+> `examples/People.base` worked example. Inline editing of note properties
+> writes back to frontmatter. See
+> **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** for the full plan.
 
 ## Repo layout
 
@@ -34,13 +34,32 @@ npm run typecheck   # tsc --noEmit
 Press <kbd>F5</kbd> in VS Code to launch an Extension Development Host. It opens
 the `examples/` folder; open `examples/People.base` to see the custom editor.
 
-## What works today (M0/M1)
+## What works today
 
-- Custom editor registered for `*.base`; opens a themed webview with a view
-  switcher toolbar and a table renderer.
-- Workspace Markdown indexer with file properties, frontmatter, tags, links.
+- **Custom editor** for `*.base` with a view-switcher toolbar and result count.
+- **Workspace Markdown indexer** — file properties, frontmatter, tags, links;
+  refreshes on change via a file watcher.
+- **Expression engine** (`src/expr/`) — lexer, Pratt parser, and evaluator
+  implementing the Bases value model, operator precedence, date/duration
+  arithmetic, list lambdas (`filter`/`map`/`reduce`), and the full
+  `docs/obsidian/Functions.md` function set.
+- **Query pipeline** (`src/query/`) — global + view filters, formulas (lazy,
+  cycle-detected), multi-key sort, group-by, limit, and built-in + custom
+  summaries.
+- **Renderers** (`media/`) — table (with grouping, column widths, summary
+  rows), cards (with cover images), and list views.
+- **Inline editing** — double-click a note-property cell to write the value
+  back into the note's YAML frontmatter.
 
-## Next up
+## Tested
 
-The expression engine (`src/expr/`) is the critical path — everything depends on
-it. See **IMPLEMENTATION_PLAN.md §3** and `test/expr.test.ts`.
+`test/expr.test.ts` covers the engine (precedence, every function group, date
+arithmetic, list lambdas, formulas). `test/query.test.ts` asserts the rows,
+sort order, grouping, and summaries for each view in `examples/People.base`
+against the sample notes in `examples/People/`.
+
+## Not yet implemented
+
+Embedded ` ```base ` code blocks and `![[file.base]]` transclusion in Markdown
+preview (M8), the point-and-click filter/sort editor UI, map view, and
+persisting UI-driven sort changes back into the `.base` file.

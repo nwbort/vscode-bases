@@ -12,5 +12,6 @@ export type WebviewMessage =
   | { type: "ready" }
   | { type: "switchView"; index: number }
   | { type: "openNote"; notePath: string }
+  | { type: "openExternal"; url: string }
   | { type: "editCell"; notePath: string; columnId: string; value: string }
   | { type: "setSort"; columnId: string; direction: "ASC" | "DESC" };

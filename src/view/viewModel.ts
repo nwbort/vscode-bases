@@ -4,13 +4,36 @@ export interface ColumnModel {
   /** Property id, e.g. "file.name" or "formula.ppu". */
   id: string;
   displayName: string;
+  /** Pixel width hint from the view's columnSize, if any. */
+  width?: number;
+  /** Whether the webview may edit this cell (note properties only). */
+  editable: boolean;
+}
+
+export type CellKind = "text" | "link" | "image" | "icon" | "checkbox" | "html" | "empty";
+
+export interface CellPart {
+  kind: CellKind;
+  text?: string;
+  /** Link target (for kind "link"). */
+  target?: string;
+  /** Image source (for kind "image"). */
+  src?: string;
+  /** Icon name (for kind "icon"). */
+  icon?: string;
+  /** Checkbox state (for kind "checkbox"). */
+  checked?: boolean;
+  /** Raw HTML (for kind "html"). */
+  html?: string;
 }
 
 export interface CellModel {
-  /** Display string. (M4+: extend with structured kind for links/images/etc.) */
-  text: string;
   /** Property id this cell belongs to (for write-back editing). */
   columnId: string;
+  /** One or more renderable parts (lists produce several). */
+  parts: CellPart[];
+  /** The raw editable string (note properties only). */
+  editValue?: string;
 }
 
 export interface RowModel {
@@ -22,6 +45,7 @@ export interface RowModel {
 export interface GroupModel {
   key: string;
   rows: RowModel[];
+  /** Per-group summary display strings keyed by column id. */
   summaries?: Record<string, string>;
 }
 
