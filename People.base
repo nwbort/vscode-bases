@@ -1,0 +1,123 @@
+summaries:
+  People: values.filter(!value.isType("null")).length
+filters:
+  or:
+    - file.inFolder("People")
+formulas:
+  daysUntilBirthday: (if(date(today().year + "-" + if(note.birthday.month > 10, "" + note.birthday.month, "0" + note.birthday.month) + "-" + note.birthday.day) < today(), date(today().year + 1 + "-" + if(note.birthday.month > 10, "" + note.birthday.month, "0" + note.birthday.month) + "-" + note.birthday.day), date(today().year + "-" + if(note.birthday.month > 10, "" + note.birthday.month, "0" + note.birthday.month) + "-" + note.birthday.day)) - today()).days
+properties:
+  file.name:
+    displayName: Name
+  note.location:
+    displayName: Location
+  note.birthday:
+    displayName: Birthday
+  note.company:
+    displayName: Company
+views:
+  - type: table
+    name: Work contacts
+    filters:
+      or:
+        - type == "work"
+    order:
+      - file.name
+      - company
+      - job title
+      - location
+    sort:
+      - property: company
+        direction: ASC
+      - property: file.name
+        direction: ASC
+      - property: location
+        direction: ASC
+    columnSize:
+      note.company: 246
+      note.job title: 270
+      note.location: 124
+  - type: table
+    name: Personal contacts
+    filters:
+      or:
+        - type != "work"
+    order:
+      - file.name
+      - company
+      - location
+      - birthday
+    sort:
+      - property: file.name
+        direction: ASC
+      - property: job title
+        direction: ASC
+    columnSize:
+      note.company: 246
+      note.job title: 270
+  - type: cards
+    name: Allens
+    filters:
+      or:
+        - company == "Allens"
+    order:
+      - file.name
+      - location
+      - email
+    cardSize: 190
+    image: ""
+  - type: cards
+    name: Birthdays
+    filters:
+      or:
+        - birthday
+    order:
+      - file.name
+      - birthday
+    sort:
+      - property: formula.daysUntilBirthday
+        direction: ASC
+  - type: table
+    name: HK
+    filters:
+      and:
+        - type == "work"
+        - company == "HoustonKemp"
+    order:
+      - file.name
+      - company
+      - job title
+      - location
+    sort:
+      - property: file.name
+        direction: ASC
+      - property: company
+        direction: ASC
+    columnSize:
+      note.company: 246
+      note.job title: 270
+  - type: table
+    name: Work Melbourne
+    filters:
+      and:
+        - location == "Melbourne"
+        - type == "work"
+    order:
+      - file.name
+      - company
+      - job title
+    sort:
+      - property: company
+        direction: ASC
+    columnSize:
+      file.name: 239
+      note.company: 230
+  - type: table
+    name: Firms
+    groupBy:
+      property: company
+      direction: ASC
+    order:
+      - file.name
+    sort: []
+    summaries:
+      file.name: People
