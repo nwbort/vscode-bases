@@ -21,6 +21,40 @@ driven by Obsidian-compatible `.base` files.
 | `media/`                   | Webview UI (table/cards/list renderers).                       |
 | `test/`                    | vitest unit tests for the pure engine code.                    |
 
+## Install
+
+**Requirements:** VS Code 1.90 or later.
+
+### From the VS Code Marketplace
+
+Search for **"Bases"** in the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`) and click **Install**, or run:
+
+```
+ext install vscode-bases.vscode-bases
+```
+
+### From a VSIX file
+
+1. Download the latest `.vsix` from the [Releases](../../releases) page.
+2. Open the Extensions view, click the `⋯` menu, and choose **Install from VSIX…**
+3. Select the downloaded file.
+
+Alternatively, from the terminal:
+
+```bash
+code --install-extension vscode-bases-0.0.1.vsix
+```
+
+### From source
+
+```bash
+git clone https://github.com/nwbort/vscode-bases
+cd vscode-bases
+npm install
+npm run package          # produces vscode-bases-0.0.1.vsix
+code --install-extension vscode-bases-0.0.1.vsix
+```
+
 ## Develop
 
 ```bash
