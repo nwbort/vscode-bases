@@ -5,6 +5,10 @@
   "version": "0.0.1",
   "publisher": "vscode-bases",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nwbort/vscode-bases"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
