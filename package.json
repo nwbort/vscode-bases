@@ -1,0 +1,86 @@
+{
+  "name": "vscode-bases",
+  "displayName": "Bases",
+  "description": "Database-like table, cards, and list views over your Markdown notes, powered by Obsidian-compatible .base files.",
+  "version": "0.0.1",
+  "publisher": "vscode-bases",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "bases.baseEditor",
+        "displayName": "Base",
+        "selector": [
+          {
+            "filenamePattern": "*.base"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "bases.createBase",
+        "title": "Bases: Create New Base"
+      },
+      {
+        "command": "bases.openSource",
+        "title": "Bases: Open Source (YAML)"
+      },
+      {
+        "command": "bases.refreshIndex",
+        "title": "Bases: Refresh Vault Index"
+      }
+    ],
+    "configuration": {
+      "title": "Bases",
+      "properties": {
+        "bases.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional glob patterns to exclude from the note index."
+        },
+        "bases.dateFormat": {
+          "type": "string",
+          "default": "YYYY-MM-DD",
+          "description": "Default date format used when rendering dates."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "node esbuild.js --production",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "vscode:prepublish": "npm run package"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.21.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.11",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0"
+  }
+}

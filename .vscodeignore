@@ -1,0 +1,14 @@
+.vscode/**
+.vscode-test/**
+src/**
+media/**
+test/**
+docs/**
+examples/**
+node_modules/**
+**/*.ts
+**/*.map
+esbuild.js
+tsconfig.json
+IMPLEMENTATION_PLAN.md
+!dist/**
