@@ -3,6 +3,7 @@ import { NoteRecord } from "../vault/noteRecord";
 import { parseBase } from "../model/baseSchema";
 import { buildViewModel } from "../query/queryEngine";
 import { renderViewModelHtml, escapeHtml } from "./renderHtml";
+import { Value } from "../expr/values";
 
 // Renders embedded bases in the built-in Markdown preview, both as fenced
 // ```base code blocks and as ![[File.base]] embeds. Registered via the
@@ -19,6 +20,8 @@ export interface MarkdownDeps {
   resolveBaseFile(target: string): string | undefined;
   /** The configured default date format (bases.dateFormat). */
   dateFormat(): string;
+  /** Convert an absolute fsPath to a workspace-relative path (for `this` context). */
+  relPath(fsPath: string): string;
 }
 
 // markdown-it isn't a dependency of this extension; it's provided by the
@@ -31,6 +34,12 @@ export function extendMarkdownIt(md: MarkdownIt, deps: MarkdownDeps): MarkdownIt
   return md;
 }
 
+function thisFromEnv(env: any, deps: MarkdownDeps): Value | undefined {
+  const fsPath = env?.document?.uri?.fsPath as string | undefined;
+  if (!fsPath) return undefined;
+  return { type: "file", path: deps.relPath(fsPath) };
+}
+
 function patchFence(md: MarkdownIt, deps: MarkdownDeps): void {
   const fallback =
     md.renderer.rules.fence ??
@@ -40,7 +49,7 @@ function patchFence(md: MarkdownIt, deps: MarkdownDeps): void {
   md.renderer.rules.fence = (tokens: any, idx: number, options: any, env: any, self: any) => {
     const token = tokens[idx];
     if ((token.info || "").trim().toLowerCase() === "base") {
-      return renderBaseSource(token.content, deps);
+      return renderBaseSource(token.content, deps, thisFromEnv(env, deps));
     }
     return fallback(tokens, idx, options, env, self);
   };
@@ -65,14 +74,14 @@ function addEmbedRule(md: MarkdownIt, deps: MarkdownDeps): void {
       }
       const token = state.push("html_block", "", 0);
       token.map = [startLine, startLine + 1];
-      token.content = renderBaseEmbed(m[1], deps);
+      token.content = renderBaseEmbed(m[1], deps, thisFromEnv(state.env, deps));
       state.line = startLine + 1;
       return true;
     },
   );
 }
 
-function renderBaseEmbed(target: string, deps: MarkdownDeps): string {
+function renderBaseEmbed(target: string, deps: MarkdownDeps, thisValue?: Value): string {
   const fsPath = deps.resolveBaseFile(target);
   if (!fsPath) {
     return errorHtml(`Base not found: ${target}`);
@@ -83,10 +92,10 @@ function renderBaseEmbed(target: string, deps: MarkdownDeps): string {
   } catch (err) {
     return errorHtml(`Could not read ${target}: ${String(err)}`);
   }
-  return renderBaseSource(source, deps);
+  return renderBaseSource(source, deps, thisValue);
 }
 
-function renderBaseSource(source: string, deps: MarkdownDeps): string {
+function renderBaseSource(source: string, deps: MarkdownDeps, thisValue?: Value): string {
   let config;
   try {
     config = parseBase(source);
@@ -94,7 +103,7 @@ function renderBaseSource(source: string, deps: MarkdownDeps): string {
     return errorHtml(`Invalid base: ${String(err)}`);
   }
   const dataSource = { all: () => deps.getNotes() };
-  const model = buildViewModel(config, 0, dataSource, { dateFormat: deps.dateFormat() });
+  const model = buildViewModel(config, 0, dataSource, { dateFormat: deps.dateFormat(), thisValue });
   return renderViewModelHtml(model);
 }
 

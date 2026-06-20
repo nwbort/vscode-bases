@@ -20,7 +20,10 @@ interface DataSource {
 }
 
 /** Display options threaded into the formatting layer (e.g. `bases.dateFormat`). */
-export type BuildOptions = Partial<FormatOptions>;
+export interface BuildOptions extends Partial<FormatOptions> {
+  /** The value of `this` in filter/formula expressions — typically the file containing the base. */
+  thisValue?: Value;
+}
 
 interface QueryRow {
   ctx: EvalContext;
@@ -48,11 +51,12 @@ export function buildViewModel(
   const columns = resolveColumns(view, config);
   const notes = index.all();
   const formulas = config.formulas ?? {};
+  const { thisValue } = options;
 
   // 1. Build a context per note and filter.
   let rows: QueryRow[] = [];
   for (const note of notes) {
-    const ctx = makeContext(note, { notes, formulas });
+    const ctx = makeContext(note, { notes, formulas, thisValue });
     if (passesCombined(config.filters, view.filters, ctx)) {
       rows.push({ ctx, note });
     }

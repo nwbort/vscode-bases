@@ -171,8 +171,8 @@ function linkTarget(v: Value): string | null {
 }
 
 function normaliseTarget(t: string): string {
-  // Strip a trailing ".md" and any folder for loose matching by basename.
-  let s = t.replace(/\.md$/i, "");
+  // Strip a trailing ".md"/".base" and any folder for loose matching by basename.
+  let s = t.replace(/\.(md|base)$/i, "");
   const slash = s.lastIndexOf("/");
   if (slash >= 0) s = s.slice(slash + 1);
   return s.toLowerCase();

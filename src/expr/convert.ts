@@ -88,6 +88,12 @@ export function fileField(note: NoteRecord, field: string): Value | null {
     case "embeds": return list(f.embeds.map((t) => link(t)));
     case "properties": return notePropertiesObject(note);
     case "file": return file(f.path);
+    case "link": return link(f.path, f.basename);
+    case "cday": return dateVal(f.ctime - (f.ctime % 86400000), false);
+    case "parentFolder": {
+      const parts = f.folder.split("/");
+      return str(parts[parts.length - 1] ?? f.folder);
+    }
     default: return null;
   }
 }
