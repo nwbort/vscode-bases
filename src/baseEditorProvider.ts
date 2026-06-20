@@ -38,7 +38,11 @@ export class BaseEditorProvider implements vscode.CustomTextEditorProvider {
         const dateFormat = vscode.workspace
           .getConfiguration("bases")
           .get<string>("dateFormat", "YYYY-MM-DD");
-        const model = buildViewModel(config, activeViewIndex, this.index, { dateFormat });
+        const relPath = vscode.workspace.asRelativePath(document.uri, false);
+        const model = buildViewModel(config, activeViewIndex, this.index, {
+          dateFormat,
+          thisValue: { type: "file", path: relPath },
+        });
         post({ type: "setViewModel", model });
       } catch (err) {
         post({ type: "setError", message: String(err) });

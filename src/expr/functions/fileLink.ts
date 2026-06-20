@@ -31,11 +31,11 @@ export const fileMethods: Record<string, CtxMethodFn> = {
   hasLink: (recv, args, ctx) => {
     const rec = recordFor(recv, ctx);
     if (!rec) return bool(false);
-    const other = targetOf(args[0] ?? NULL).replace(/\.md$/i, "");
+    const other = targetOf(args[0] ?? NULL).replace(/\.(md|base)$/i, "");
     const otherBase = other.split("/").pop() ?? other;
     return bool(
       rec.file.links.some((l) => {
-        const lb = l.replace(/\.md$/i, "").split("/").pop() ?? l;
+        const lb = l.replace(/\.(md|base)$/i, "").split("/").pop() ?? l;
         return lb === otherBase || l === other;
       }),
     );
@@ -77,9 +77,9 @@ export const linkMethods: Record<string, CtxMethodFn> = {
   linksTo: (recv, args, ctx) => {
     const rec = recordFor(recv, ctx);
     if (!rec) return bool(false);
-    const other = targetOf(args[0] ?? NULL).replace(/\.md$/i, "").split("/").pop();
+    const other = targetOf(args[0] ?? NULL).replace(/\.(md|base)$/i, "").split("/").pop();
     return bool(
-      rec.file.links.some((l) => (l.replace(/\.md$/i, "").split("/").pop() ?? l) === other),
+      rec.file.links.some((l) => (l.replace(/\.(md|base)$/i, "").split("/").pop() ?? l) === other),
     );
   },
 };

@@ -59,6 +59,7 @@ export function activate(context: vscode.ExtensionContext): { extendMarkdownIt(m
           vscode.workspace
             .getConfiguration("bases")
             .get<string>("dateFormat", "YYYY-MM-DD"),
+        relPath: (fsPath) => vscode.workspace.asRelativePath(fsPath, false),
       });
     },
   };
