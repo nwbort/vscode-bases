@@ -42,7 +42,7 @@ ext install vscode-bases.vscode-bases
 Alternatively, from the terminal:
 
 ```bash
-code --install-extension vscode-bases-0.0.1.vsix
+code --install-extension vscode-bases-0.1.0.vsix
 ```
 
 ### From source
@@ -51,8 +51,8 @@ code --install-extension vscode-bases-0.0.1.vsix
 git clone https://github.com/nwbort/vscode-bases
 cd vscode-bases
 npm install
-npm run package          # produces vscode-bases-0.0.1.vsix
-code --install-extension vscode-bases-0.0.1.vsix
+npm run package          # produces vscode-bases-0.1.0.vsix
+code --install-extension vscode-bases-0.1.0.vsix
 ```
 
 ## Develop
@@ -84,16 +84,24 @@ the `examples/` folder; open `examples/People.base` to see the custom editor.
   rows), cards (with cover images), and list views.
 - **Inline editing** — double-click a note-property cell to write the value
   back into the note's YAML frontmatter.
+- **Markdown preview embeds** — fenced ` ```base ` blocks and `![[File.base]]`
+  transclusions render as live tables in the built-in Markdown preview.
+- **YAML authoring** — `.base` files are treated as YAML for raw-source editing
+  (via **Bases: Open Source**) and validated against a bundled JSON Schema (when
+  the [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)
+  is installed).
+- **Configurable date format** — `bases.dateFormat` controls how bare dates render.
 
 ## Tested
 
 `test/expr.test.ts` covers the engine (precedence, every function group, date
 arithmetic, list lambdas, formulas). `test/query.test.ts` asserts the rows,
 sort order, grouping, and summaries for each view in `examples/People.base`
-against the sample notes in `examples/People/`.
+against the sample notes in `examples/People/`. `test/markdown.test.ts` covers
+date formatting and the static embed HTML renderer. Open `examples/Embeds.md`'s
+Markdown preview to see embeds live.
 
 ## Not yet implemented
 
-Embedded ` ```base ` code blocks and `![[file.base]]` transclusion in Markdown
-preview (M8), the point-and-click filter/sort editor UI, map view, and
-persisting UI-driven sort changes back into the `.base` file.
+The point-and-click filter/sort editor UI, map view, and persisting UI-driven
+sort changes back into the `.base` file.

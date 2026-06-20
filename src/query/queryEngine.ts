@@ -8,7 +8,9 @@ import { passesCombined } from "./filter";
 import { sortRows } from "./sort";
 import { groupRows } from "./groupBy";
 import { computeSummary } from "./summaries";
-import { formatCellParts, formatPlain } from "../view/formatCell";
+import {
+  formatCellParts, formatPlain, FormatOptions, DEFAULT_FORMAT_OPTIONS,
+} from "../view/formatCell";
 import {
   ViewModel, ColumnModel, RowModel, GroupModel, CellModel,
 } from "../view/viewModel";
@@ -16,6 +18,9 @@ import {
 interface DataSource {
   all(): NoteRecord[];
 }
+
+/** Display options threaded into the formatting layer (e.g. `bases.dateFormat`). */
+export type BuildOptions = Partial<FormatOptions>;
 
 interface QueryRow {
   ctx: EvalContext;
@@ -29,7 +34,9 @@ export function buildViewModel(
   config: BaseConfig,
   viewIndex: number,
   index: DataSource,
+  options: BuildOptions = {},
 ): ViewModel {
+  const fmt: FormatOptions = { ...DEFAULT_FORMAT_OPTIONS, ...options };
   const views = config.views;
   const view: ViewConfig | undefined = views[viewIndex];
   const viewNames = views.map((v, i) => v.name ?? `View ${i + 1}`);
@@ -73,16 +80,16 @@ export function buildViewModel(
     const grouped = groupRows(rows, view.groupBy);
     groups = grouped.map((g) => ({
       key: g.key,
-      rows: g.rows.map((r) => buildRow(r, columns)),
-      summaries: computeSummaries(summaryMap, columns, g.rows, customSummaries, g.rows[0]?.ctx),
+      rows: g.rows.map((r) => buildRow(r, columns, fmt)),
+      summaries: computeSummaries(summaryMap, columns, g.rows, customSummaries, g.rows[0]?.ctx, fmt),
     }));
   } else {
-    flatRows = rows.map((r) => buildRow(r, columns));
+    flatRows = rows.map((r) => buildRow(r, columns, fmt));
   }
 
   const footerSummaries =
     Object.keys(summaryMap).length > 0
-      ? computeSummaries(summaryMap, columns, rows, customSummaries, sampleCtx)
+      ? computeSummaries(summaryMap, columns, rows, customSummaries, sampleCtx, fmt)
       : undefined;
 
   return {
@@ -117,7 +124,7 @@ function resolveColumns(view: ViewConfig, config: BaseConfig): ColumnModel[] {
   });
 }
 
-function buildRow(row: QueryRow, columns: ColumnModel[]): RowModel {
+function buildRow(row: QueryRow, columns: ColumnModel[], fmt: FormatOptions): RowModel {
   const cells: CellModel[] = columns.map((col) => {
     const id = parsePropertyId(col.id);
     // The note-title column renders as a clickable link showing the basename,
@@ -131,7 +138,7 @@ function buildRow(row: QueryRow, columns: ColumnModel[]): RowModel {
     const value = resolveProperty(col.id, row.ctx);
     return {
       columnId: col.id,
-      parts: formatCellParts(value),
+      parts: formatCellParts(value, fmt),
       editValue: col.editable ? valueToString(value) : undefined,
     };
   });
@@ -144,6 +151,7 @@ function computeSummaries(
   rows: QueryRow[],
   customSummaries: Record<string, string>,
   ctx: EvalContext | undefined,
+  fmt: FormatOptions,
 ): Record<string, string> | undefined {
   const entries = Object.entries(summaryMap);
   if (entries.length === 0 || !ctx) {
@@ -153,7 +161,7 @@ function computeSummaries(
   for (const [columnId, summaryName] of entries) {
     const values: Value[] = rows.map((r) => resolveProperty(columnId, r.ctx));
     const result = computeSummary(summaryName, values, customSummaries, ctx);
-    out[columnId] = formatPlain(result);
+    out[columnId] = formatPlain(result, fmt);
   }
   return out;
 }

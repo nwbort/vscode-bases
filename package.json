@@ -2,7 +2,7 @@
   "name": "vscode-bases",
   "displayName": "Bases",
   "description": "Database-like table, cards, and list views over your Markdown notes, powered by Obsidian-compatible .base files.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "publisher": "vscode-bases",
   "license": "MIT",
   "repository": {
@@ -62,7 +62,26 @@
           "description": "Default date format used when rendering dates."
         }
       }
-    }
+    },
+    "languages": [
+      {
+        "id": "yaml",
+        "extensions": [
+          ".base"
+        ],
+        "aliases": []
+      }
+    ],
+    "yamlValidation": [
+      {
+        "fileMatch": "*.base",
+        "url": "./schemas/base.schema.json"
+      }
+    ],
+    "markdown.markdownItPlugins": true,
+    "markdown.previewStyles": [
+      "./media/markdown.css"
+    ]
   },
   "scripts": {
     "build": "node esbuild.js",
@@ -74,12 +93,14 @@
     "vscode:prepublish": "npm run package"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.x",
     "@types/vscode": "^1.90.0",
     "esbuild": "^0.21.0",
     "eslint": "^9.0.0",
     "typescript": "^5.4.0",
+    "typescript-eslint": "^8.61.1",
     "vitest": "^1.6.0"
   },
   "dependencies": {

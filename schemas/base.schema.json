@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/nwbort/vscode-bases/schemas/base.schema.json",
+  "title": "Base",
+  "description": "An Obsidian-compatible .base file: database-like views over Markdown notes.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "filters": { "$ref": "#/definitions/filter" },
+    "formulas": {
+      "type": "object",
+      "description": "Computed properties. Each value is a Bases expression evaluated per note.",
+      "additionalProperties": { "type": "string" }
+    },
+    "properties": {
+      "type": "object",
+      "description": "Per-property display configuration, keyed by property id (e.g. note.author, file.name, formula.x).",
+      "additionalProperties": { "$ref": "#/definitions/propertyConfig" }
+    },
+    "summaries": {
+      "type": "object",
+      "description": "Named aggregate formulas. The bound `values` is the column's list of values.",
+      "additionalProperties": { "type": "string" }
+    },
+    "views": {
+      "type": "array",
+      "description": "One or more renderings of the data.",
+      "items": { "$ref": "#/definitions/view" }
+    }
+  },
+  "required": ["views"],
+  "definitions": {
+    "filter": {
+      "description": "A single filter statement, or an and/or/not group of filters.",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "and": { "type": "array", "items": { "$ref": "#/definitions/filter" } },
+            "or": { "type": "array", "items": { "$ref": "#/definitions/filter" } },
+            "not": { "type": "array", "items": { "$ref": "#/definitions/filter" } }
+          }
+        }
+      ]
+    },
+    "propertyConfig": {
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string", "description": "Column/field label shown in views." }
+      },
+      "additionalProperties": true
+    },
+    "direction": {
+      "type": "string",
+      "enum": ["ASC", "DESC"],
+      "description": "Sort/group direction."
+    },
+    "sortSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["property"],
+      "properties": {
+        "property": { "type": "string" },
+        "direction": { "$ref": "#/definitions/direction" }
+      }
+    },
+    "view": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "description": "The renderer for this view.",
+          "anyOf": [
+            { "type": "string", "enum": ["table", "cards", "list"] },
+            { "type": "string" }
+          ]
+        },
+        "name": { "type": "string", "description": "View name shown in the switcher." },
+        "limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum number of result rows."
+        },
+        "filters": { "$ref": "#/definitions/filter" },
+        "order": {
+          "type": "array",
+          "description": "Property ids, in display order.",
+          "items": { "type": "string" }
+        },
+        "sort": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/sortSpec" }
+        },
+        "groupBy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["property"],
+          "properties": {
+            "property": { "type": "string" },
+            "direction": { "$ref": "#/definitions/direction" }
+          }
+        },
+        "summaries": {
+          "type": "object",
+          "description": "Map of property id to summary name to show for this view.",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}
