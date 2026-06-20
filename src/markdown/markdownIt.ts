@@ -23,7 +23,6 @@ export interface MarkdownDeps {
 
 // markdown-it isn't a dependency of this extension; it's provided by the
 // Markdown preview at runtime and passed to extendMarkdownIt. Keep it untyped.
-/* eslint-disable @typescript-eslint/no-explicit-any */
 type MarkdownIt = any;
 
 export function extendMarkdownIt(md: MarkdownIt, deps: MarkdownDeps): MarkdownIt {
