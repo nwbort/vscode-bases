@@ -1,10 +1,15 @@
 import * as vscode from "vscode";
 import { BaseEditorProvider } from "./baseEditorProvider";
 import { VaultIndex } from "./vault/vaultIndex";
+import { BaseFileRegistry } from "./markdown/baseRegistry";
+import { extendMarkdownIt } from "./markdown/markdownIt";
 
-export function activate(context: vscode.ExtensionContext): void {
+export function activate(context: vscode.ExtensionContext): { extendMarkdownIt(md: unknown): unknown } {
   const index = new VaultIndex();
   context.subscriptions.push(index);
+
+  const baseFiles = new BaseFileRegistry();
+  context.subscriptions.push(baseFiles);
 
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
@@ -18,7 +23,10 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("bases.refreshIndex", () => index.rebuild()),
+    vscode.commands.registerCommand("bases.refreshIndex", () => {
+      void baseFiles.rebuild();
+      return index.rebuild();
+    }),
   );
 
   context.subscriptions.push(
@@ -39,6 +47,21 @@ export function activate(context: vscode.ExtensionContext): void {
       createBase(context),
     ),
   );
+
+  // Expose a markdown-it plugin so the built-in Markdown preview can render
+  // ```base code blocks and ![[File.base]] embeds.
+  return {
+    extendMarkdownIt(md: unknown): unknown {
+      return extendMarkdownIt(md, {
+        getNotes: () => index.all(),
+        resolveBaseFile: (target) => baseFiles.resolve(target),
+        dateFormat: () =>
+          vscode.workspace
+            .getConfiguration("bases")
+            .get<string>("dateFormat", "YYYY-MM-DD"),
+      });
+    },
+  };
 }
 
 export function deactivate(): void {

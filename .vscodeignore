@@ -12,3 +12,6 @@ esbuild.js
 tsconfig.json
 IMPLEMENTATION_PLAN.md
 !dist/**
+!media/style.css
+!media/markdown.css
+!schemas/**

@@ -35,7 +35,10 @@ export class BaseEditorProvider implements vscode.CustomTextEditorProvider {
       await this.index.whenReady();
       try {
         const config = parseBase(document.getText());
-        const model = buildViewModel(config, activeViewIndex, this.index);
+        const dateFormat = vscode.workspace
+          .getConfiguration("bases")
+          .get<string>("dateFormat", "YYYY-MM-DD");
+        const model = buildViewModel(config, activeViewIndex, this.index, { dateFormat });
         post({ type: "setViewModel", model });
       } catch (err) {
         post({ type: "setError", message: String(err) });
@@ -52,6 +55,13 @@ export class BaseEditorProvider implements vscode.CustomTextEditorProvider {
       }),
     );
     subscriptions.push(this.index.onDidChange(() => void render()));
+    subscriptions.push(
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration("bases.dateFormat")) {
+          void render();
+        }
+      }),
+    );
 
     webviewPanel.webview.onDidReceiveMessage((msg: WebviewMessage) => {
       switch (msg.type) {
