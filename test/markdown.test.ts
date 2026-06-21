@@ -3,6 +3,8 @@ import { formatCellParts, formatPlain } from "../src/view/formatCell";
 import { dateVal } from "../src/expr/values";
 import { renderViewModelHtml } from "../src/markdown/renderHtml";
 import { ViewModel } from "../src/view/viewModel";
+import { extendMarkdownIt, MarkdownDeps } from "../src/markdown/markdownIt";
+import { NoteRecord, FileProps } from "../src/vault/noteRecord";
 
 describe("date formatting honours the configured pattern", () => {
   const d = dateVal(Date.UTC(2024, 0, 9), false); // 2024-01-09
@@ -68,5 +70,62 @@ describe("renderViewModelHtml (Markdown preview embeds)", () => {
   it("surfaces errors", () => {
     const errored: ViewModel = { ...model, error: "boom" };
     expect(renderViewModelHtml(errored)).toContain("base-embed-error");
+  });
+});
+
+describe("embedded base resolves `this` from the preview env", () => {
+  function makeNote(file: Partial<FileProps>): NoteRecord {
+    const f: FileProps = {
+      name: "x.md", basename: "x", path: "x.md", folder: "", ext: "md",
+      size: 1, ctime: 0, mtime: 0, tags: [], links: [], embeds: [], ...file,
+    };
+    return { file: f, frontmatter: {} };
+  }
+
+  const notes: NoteRecord[] = [
+    makeNote({ name: "Linker.md", basename: "Linker", path: "Linker.md", links: ["Target"] }),
+    makeNote({ name: "Other.md", basename: "Other", path: "Other.md", links: ["Elsewhere"] }),
+    makeNote({ name: "Target.md", basename: "Target", path: "Target.md" }),
+  ];
+
+  const deps: MarkdownDeps = {
+    getNotes: () => notes,
+    resolveBaseFile: () => undefined,
+    dateFormat: () => "YYYY-MM-DD",
+    relPath: (fsPath: string) => fsPath.replace(/^\/vault\//, ""),
+  };
+
+  // Minimal markdown-it stand-in: extendMarkdownIt only needs renderer.rules
+  // (for the fence rule) and block.ruler.before (for the embed rule).
+  function fakeMd(): any {
+    return { renderer: { rules: {} }, block: { ruler: { before: () => {} } } };
+  }
+
+  const BACKLINKS_BASE = [
+    "views:",
+    "  - type: table",
+    "    name: Backlinks",
+    "    filters: file.links.contains(this)",
+    "    order:",
+    "      - file.name",
+  ].join("\n");
+
+  function renderFence(env: unknown): string {
+    const md = fakeMd();
+    extendMarkdownIt(md, deps);
+    const token = { info: "base", content: BACKLINKS_BASE };
+    return md.renderer.rules.fence([token], 0, {}, env, { renderToken: () => "" });
+  }
+
+  it("shows backlinks when env.currentDocument is the containing note", () => {
+    const html = renderFence({ currentDocument: { fsPath: "/vault/Target.md" } });
+    expect(html).toContain("Linker");
+    expect(html).not.toContain("Other");
+  });
+
+  it("still works via the legacy env.document.uri shape", () => {
+    const html = renderFence({ document: { uri: { fsPath: "/vault/Target.md" } } });
+    expect(html).toContain("Linker");
+    expect(html).not.toContain("Other");
   });
 });
