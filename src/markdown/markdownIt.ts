@@ -35,7 +35,12 @@ export function extendMarkdownIt(md: MarkdownIt, deps: MarkdownDeps): MarkdownIt
 }
 
 function thisFromEnv(env: any, deps: MarkdownDeps): Value | undefined {
-  const fsPath = env?.document?.uri?.fsPath as string | undefined;
+  // VS Code's Markdown preview passes the rendered document's URI as
+  // `env.currentDocument` (a vscode.Uri). Older/other render paths may instead
+  // expose `env.document.uri`, so fall back to that for robustness.
+  const fsPath = (env?.currentDocument?.fsPath ?? env?.document?.uri?.fsPath) as
+    | string
+    | undefined;
   if (!fsPath) return undefined;
   return { type: "file", path: deps.relPath(fsPath) };
 }
