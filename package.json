@@ -2,7 +2,7 @@
   "name": "vscode-bases",
   "displayName": "Bases",
   "description": "Database-like table, cards, and list views over your Markdown notes, powered by Obsidian-compatible .base files.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "vscode-bases",
   "license": "MIT",
   "repository": {
