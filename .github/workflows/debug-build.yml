@@ -1,0 +1,51 @@
+name: Debug build
+
+# Produces an unminified .vsix with sourcemaps, uploaded as a downloadable
+# artifact. Use this when you need to debug the packaged extension (breakpoints
+# map back to the .ts source, unlike the production build from release.yml).
+#
+# Run it from the Actions tab via "Run workflow" (pick the branch you want), or
+# it builds automatically on pushes to claude/* branches. Download the vsix from
+# the run's "Artifacts" section, then install with:
+#   code --install-extension vscode-bases-debug.vsix
+# (or Extensions view -> "..." -> Install from VSIX...). Reload the window after.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'claude/**'
+
+permissions:
+  contents: read
+
+jobs:
+  debug-vsix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `vsce package` runs the `vscode:prepublish` script, which normally does a
+      # production (minified, no-sourcemap) build. Point it at the dev build so
+      # the packaged dist/ keeps sourcemaps and stays unminified.
+      - name: Use unminified dev build for packaging
+        run: npm pkg set "scripts.vscode:prepublish=npm run build"
+
+      - name: Package debug extension
+        run: npx @vscode/vsce package --no-dependencies -o vscode-bases-debug.vsix
+
+      - name: Upload vsix artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-bases-debug-vsix
+          path: vscode-bases-debug.vsix
+          if-no-files-found: error
